@@ -20,6 +20,7 @@ model:
     dropout : [0.0, 0.0]
     cross_layer_sizes : [100, 100, 50]
     infer_model_name : epoch_2
+    load_model_name : ./checkpoint/epoch_9
 
 
 #train
@@ -43,5 +44,5 @@ train:
 #metric :'auc','logloss', 'group_auc'
 info:
     show_step : 1
-    save_epoch : 5
+    save_epoch : 1
     metrics : ['auc','logloss']

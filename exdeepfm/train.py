@@ -98,6 +98,7 @@ def run_infer(load_model, load_sess, filename, hparams, sample_num_file):
             break
     preds = preds[:sample_num]
     hparams.res_name = util.convert_res_name(hparams.infer_file)
+    print("preds:==================", preds)
     # print('result name:', hparams.res_name)
     with open(hparams.res_name, 'w') as out:
         out.write('\n'.join(map(str, preds)))
@@ -300,5 +301,93 @@ def train(hparams, scope=None, target_session=""):
             last_eval = eval_res["auc"]
     writer.close()
     # after train,run infer
+    if hparams.infer_file is not None:
+        run_infer(train_model, train_sess, hparams.infer_file_cache, hparams, util.INFER_NUM)
+
+
+def inference(hparams, scope=None, target_session=""):
+    params = hparams.values()
+    for key, val in params.items():
+        hparams.logger.info(str(key) + ':' + str(val))
+
+    print('load and cache data...')
+    if hparams.train_file is not None:
+        cache_data(hparams, hparams.train_file, flag='train')
+    if hparams.eval_file is not None:
+        cache_data(hparams, hparams.eval_file, flag='eval')
+    if hparams.test_file is not None:
+        cache_data(hparams, hparams.test_file, flag='test')
+    if hparams.infer_file is not None:
+        cache_data(hparams, hparams.infer_file, flag='infer')
+
+    if hparams.model_type == 'deepFM':
+        model_creator = DeepfmModel
+        print("run deepfm model!")
+    elif hparams.model_type == 'deepWide':
+        model_creator = DeepWideModel
+        print("run deepWide model!")
+    elif hparams.model_type == 'dnn':
+        print("run dnn model!")
+        model_creator = DnnModel
+    elif hparams.model_type == 'ipnn':
+        print("run ipnn model!")
+        model_creator = IpnnModel
+    elif hparams.model_type == 'opnn':
+        print("run opnn model!")
+        model_creator = OpnnModel
+    elif hparams.model_type == 'din':
+        print("run din model!")
+        model_creator = DinModel
+    elif hparams.model_type == 'fm':
+        print("run fm model!")
+        model_creator = FmModel
+    elif hparams.model_type == 'lr':
+        print("run lr model!")
+        model_creator = LrModel
+    elif hparams.model_type == 'din':
+        print("run din model!")
+        model_creator = DinModel
+    elif hparams.model_type == 'cccfnet':
+        print("run cccfnet model!")
+        model_creator = CCCFModel
+    elif hparams.model_type == 'deepcross':
+        print("run deepcross model!")
+        model_creator = DeepCrossModel
+    elif hparams.model_type == 'exDeepFM':
+        print("run extreme deepFM model!")
+        model_creator = ExtremeDeepFMModel
+    elif hparams.model_type == 'cross':
+        print("run extreme cross model!")
+        model_creator = CrossModel
+    elif hparams.model_type == 'CIN':
+        print("run extreme cin model!")
+        model_creator = CINModel
+    
+    else:
+        raise ValueError("model type should be cccfnet, deepFM, deepWide, dnn, fm, lr, ipnn, opnn, din")
+
+    # define train,eval,infer graph
+    # define train session, eval session, infer session
+    train_model = create_train_model(model_creator, hparams, scope)
+    gpuconfig = tf.ConfigProto()
+    gpuconfig.gpu_options.allow_growth = True
+    tf.set_random_seed(1234)
+    train_sess = tf.Session(target=target_session, graph=train_model.graph, config=gpuconfig)
+
+    train_sess.run(train_model.model.init_op)
+    # load model from checkpoint
+    print("load model name: ====================", hparams.load_model_name)
+    if not hparams.load_model_name is None:
+        checkpoint_path = hparams.load_model_name
+        try:
+            train_model.model.saver.restore(train_sess, checkpoint_path)
+            print('load model', checkpoint_path)
+        except:
+            raise IOError("Failed to find any matching files for {0}".format(checkpoint_path))
+    print('total_loss = data_loss+regularization_loss, data_loss = {rmse or logloss ..}')
+ 
+    # after train,run infer
+    print("infer file:=================", hparams.infer_file )
+    print("infer_file_cache: ===============================", hparams.infer_file_cache)
     if hparams.infer_file is not None:
         run_infer(train_model, train_sess, hparams.infer_file_cache, hparams, util.INFER_NUM)

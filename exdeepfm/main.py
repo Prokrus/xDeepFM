@@ -181,7 +181,8 @@ def main():
     print(hparams.values())
     log = Log(hparams)
     hparams.logger = log.logger
-    train.train(hparams)
+    # train.train(hparams)
+    train.inference(hparams)
 
 
 main()
